@@ -1,0 +1,279 @@
+package layout
+
+import (
+	"github.com/htetmyatthar/templui/pkg/components"
+	"github.com/htetmyatthar/templui/pkg/icons"
+
+	"github.com/htetmyatthar/server-manager-v2/middleware/csrf"
+	scomponents "github.com/htetmyatthar/server-manager-v2/web/components"
+)
+
+const dateFormat = "2006-01-02"
+
+templ DashboardMain(content templ.Component, sideBarCSRFToken string) {
+	<main
+		x-data="{ isOpen: false }"
+		x-init="$watch('isOpen', value => document.body.classList.toggle('overflow-hidden', value))"
+		id="main"
+		hx-swap-oob="true"
+	>
+		@components.Button(components.ButtonProps{
+			Type:    "button",
+			Class:   "sm:hidden",
+			Variant: components.ButtonVariantTransparent,
+			IconLeft: icons.PanelLeft(icons.IconProps{
+				Size: "20",
+			}),
+			Attributes: templ.Attributes{
+				"@click":        "isOpen = !isOpen",
+				"aria-controls": "default-sidebar",
+			},
+		})
+		@sideBar(sideBarCSRFToken)
+		if content != nil {
+			@content
+		}
+		{ children... }
+		<section title="modals">
+			@QRModal()
+			@TextKeyModal()
+			@EditUserModal()
+		</section>
+		<template x-if="isOpen">
+			<div
+				drawer-backdrop
+				class="bg-gray-900/50 dark:bg-gray-900/80 fixed inset-0 z-30"
+				@click="isOpen = false"
+			></div>
+		</template>
+		<div id="toast-container"></div>
+	</main>
+}
+
+templ DashboardResources() {
+	<script type="text/javascript" src="https://cdn.lothone.shop/qrcode.min.js" defer></script>
+}
+
+templ DashboardPage(sideBarCSRFToken, accountCSRFToken, totalUserCount, vmessCount, shadowsocksCount, sstpCount string) {
+	@base(
+		DashboardResources(),
+		nil,
+		DashboardMain(DashboardContent(accountCSRFToken, "", totalUserCount, vmessCount, shadowsocksCount, sstpCount), sideBarCSRFToken),
+		nil,
+	)
+}
+
+templ DashboardContent(accountCSRFToken, serverCSRFToken, totalUserCount, vmessCount, shadowsocksCount, sstpCount string) {
+	<section id="main-content">
+		<div class="p-4 min-sm:ml-48 max-sm:full flex items:center justify-center">
+			@components.Card(components.CardProps{
+				Class: "max-w-lg bg-secondary shadow-lg",
+			}) {
+				<div class="flex flex-col flex-1">
+					@components.CardHeader() {
+						@components.CardTitle() {
+							Create New User Form
+						}
+					}
+					@components.CardContent() {
+						@scomponents.AccountCreateForm(accountCSRFToken, nil)
+					}
+				</div>
+			}
+		</div>
+		<div class="p-4 min-sm:ml-48 max-sm:full flex items:center justify-center">
+			@components.Card(components.CardProps{
+				Class: "max-w-lg bg-secondary shadow-lg",
+			}) {
+				<div class="flex flex-col flex-1">
+					@components.CardHeader() {
+						@components.CardTitle() {
+							<div class="flex justify-between">
+								<span>Total Users</span>
+								<span>{ totalUserCount }</span>
+							</div>
+						}
+					}
+					@components.CardContent() {
+						<div
+							class="p-4 flex justify-between bg-white border-b dark:bg-gray-800 dark:border-gray-700 border-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600"
+						>
+							<span>
+								Vmess
+							</span>
+							<span>
+								{ vmessCount }
+							</span>
+						</div>
+						<div class="p-4 flex justify-between bg-white border-b dark:bg-gray-800 dark:border-gray-700 border-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600">
+							<span>
+								Shadowsocks
+							</span>
+							<span>
+								{ shadowsocksCount }
+							</span>
+						</div>
+						<div class="p-4 flex justify-between bg-white border-b dark:bg-gray-800 dark:border-gray-700 border-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600">
+							<span>
+								SSTP
+							</span>
+							<span>
+								{ sstpCount }
+							</span>
+						</div>
+					}
+				</div>
+			}
+		</div>
+		<div class="p-4 min-sm:ml-48 max-sm:full flex items:center justify-center">
+			@components.Card(components.CardProps{
+				Class: "max-w-lg bg-secondary shadow-lg",
+			}) {
+				<div class="flex flex-col flex-1">
+					@components.CardHeader() {
+						@components.CardTitle() {
+							<div class="flex justify-between">
+								<span>Server status</span>
+								<span id="status"></span>
+							</div>
+						}
+					}
+					@components.CardContent() {
+						<p>
+							Normally you won't need to do this. The panel will automatically handle restarting the services for you.
+							<br/>
+							But if you think the services are not working and newly created accounts are not accessible, you can override this.
+						</p>
+					}
+					@components.CardFooter() {
+						<div class="flex gap-4">
+							@components.Button(components.ButtonProps{
+								Type:  "button",
+								Text:  "Restart",
+								Class: "text-md flex justify-between",
+								IconLeft: icons.RotateCcw(icons.IconProps{
+									Size: "20",
+								}),
+								Attributes: templ.Attributes{
+									"hx-post":    "/server/restart",
+									"hx-headers": `{"X-CSRF-TOKEN": "` + serverCSRFToken + `"}`,
+									"hx-swap":    "none",
+								},
+							})
+							@components.Button(components.ButtonProps{
+								Type:  "button",
+								Text:  "Check",
+								Class: "text-md flex justify-between",
+								IconLeft: icons.CircleAlert(icons.IconProps{
+									Size: "20",
+								}),
+								Attributes: templ.Attributes{
+									"hx-get":     "/server/status",
+									"hx-headers": `{"X-CSRF-TOKEN": "` + serverCSRFToken + `"}`,
+									"hx-target":  "#status",
+									"hx-swap":    "outerHTML",
+								},
+							})
+						</div>
+					}
+				</div>
+			}
+		</div>
+	</section>
+}
+
+// sideBar is the responsive side bar for both the mobile and desktop view.
+templ sideBar(token string) {
+	<aside
+		id="default-sidebar"
+		class="fixed top-0 left-0 z-40 w-48 h-screen transition-transform sm:translate-x-0 bg-secondary"
+		:class="isOpen ? 'translate-x-0' : '-translate-x-full'"
+		aria-label="Sidebar"
+	>
+		<input hidden id="aside-token" name={ csrf.CSRFFieldName } value={ token } type="text"/>
+		<div class="h-full px-3 py-4 overflow-y-auto flex flex-col items-between gap-2">
+			@components.Button(components.ButtonProps{
+				Type:    "button",
+				Text:    "Dashboard",
+				Class:   "w-full text-md flex justify-between",
+				Variant: components.ButtonVariantSecondary,
+				IconLeft: icons.ChartPie(icons.IconProps{
+					Size: "20",
+				}),
+				Attributes: templ.Attributes{
+					"hx-get":      "/dashboard",
+					"hx-push-url": "/dashboard",
+					"hx-target":   "#main-content",
+					"hx-swap":     "outerHTML",
+					"hx-trigger":  "click[window.location.pathname != '/dashboard']",
+					"@click":      "isOpen = false",
+				},
+			})
+			@components.Button(components.ButtonProps{
+				Type:    "button",
+				Text:    "vmess",
+				Class:   "w-full text-md flex justify-between",
+				Variant: components.ButtonVariantSecondary,
+				IconLeft: icons.Server(icons.IconProps{
+					Size: "20",
+				}),
+				Attributes: templ.Attributes{
+					"hx-get":      "/dashboard/vmess",
+					"hx-push-url": "/dashboard/vmess",
+					"hx-target":   "#main-content",
+					"hx-swap":     "outerHTML",
+					"hx-trigger":  "click[window.location.pathname != '/dashboard/vmess']",
+					"@click":      "isOpen = false",
+				},
+			})
+			@components.Button(components.ButtonProps{
+				Type:    "button",
+				Text:    "shadowsocks",
+				Class:   "w-full text-md flex justify-between",
+				Variant: components.ButtonVariantSecondary,
+				IconLeft: icons.Server(icons.IconProps{
+					Size: "20",
+				}),
+				Attributes: templ.Attributes{
+					"hx-get":      "/dashboard/shadowsocks",
+					"hx-push-url": "/dashboard/shadowsocks",
+					"hx-target":   "#main-content",
+					"hx-swap":     "outerHTML",
+					"hx-trigger":  "click[window.location.pathname != '/dashboard/shadowsocks']",
+					"@click":      "isOpen = false",
+				},
+			})
+			@components.Button(components.ButtonProps{
+				Type:    "button",
+				Text:    "sstp",
+				Class:   "w-full text-md flex justify-between",
+				Variant: components.ButtonVariantSecondary,
+				IconLeft: icons.Server(icons.IconProps{
+					Size: "20",
+				}),
+				Attributes: templ.Attributes{
+					"hx-get":      "/dashboard/sstp",
+					"hx-push-url": "/dashboard/sstp",
+					"hx-target":   "#main-content",
+					"hx-swap":     "outerHTML",
+					"hx-trigger":  "click[window.location.pathname != '/dashboard/sstp']",
+					"@click":      "isOpen = false",
+				},
+			})
+			@components.Button(components.ButtonProps{
+				Type:    "button",
+				Text:    "Logout",
+				Class:   "w-full text-md flex justify-between",
+				Variant: components.ButtonVariantSecondary,
+				IconLeft: icons.LogOut(icons.IconProps{
+					Size: "20",
+				}),
+				Attributes: templ.Attributes{
+					"hx-post":    "/logout",
+					"hx-include": "#aside-token",
+				},
+			})
+			@scomponents.DarkModeToggle()
+		</div>
+	</aside>
+}

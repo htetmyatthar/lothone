@@ -1,0 +1,263 @@
+package layout
+
+import (
+	c "github.com/htetmyatthar/server-manager-v2/web/components"
+	"github.com/htetmyatthar/templui/pkg/components"
+	"github.com/htetmyatthar/templui/pkg/icons"
+)
+
+templ LoginMain(csrfToken, version string) {
+	<main class="h-screen flex flex-col items-center justify-center gap-4" id="main-content" hx-swap-oob="true">
+		<section>
+			@components.Card(components.CardProps{
+				Horizontal: true,
+				Class:      "max-w-lg bg-secondary shadow-lg",
+			}) {
+				@components.CardImage(components.CardImageProps{
+					Src:      "https://cdn.lothone.shop/login-image.jpeg",
+					Alt:      "Left side image",
+					Position: components.CardImageLeft,
+					Width:    "1/3",
+					Class:    "flex items-center justify-center sm:1/6",
+				})
+				<div class="flex flex-col flex-1">
+					@components.CardHeader() {
+						@components.CardTitle() {
+							Lothone Server Panel
+						}
+						@components.CardDescription() {
+							Sign in with the credentials that you got from the administrators.
+						}
+					}
+					@components.CardContent() {
+						@loginForm(csrfToken)
+					}
+				</div>
+			}
+		</section>
+		<section title="version number">
+			<p>{ version }</p>
+		</section>
+	</main>
+}
+
+templ LoginResources() {
+	// note: qrcode generator preloaded for dashboard.
+	<link as="script" rel="prefetch" href="https://cdn.lothone.shop/qrcode.min.js"/>
+}
+
+templ LoginHeader() {
+	@c.DarkModeToggle()
+}
+
+templ LoginPage(csrfToken, version string) {
+	@base(
+		LoginResources(),
+		LoginHeader(),
+		LoginMain(csrfToken, version),
+		nil,
+	)
+}
+
+templ loginForm(csrfToken string) {
+	<form
+		id="loginForm"
+		action="/login"
+		method="post"
+		hx-post="/login"
+		hx-push-url="true"
+		hx-swap="outerHTML scroll:window:top"
+		hx-trigger="submit"
+		hx-headers={ `{"X-CSRF-TOKEN": "` + csrfToken + `"}` }
+		x-data="{ showPassword: false }"
+	>
+		<input hidden type="text" name="token" value={ csrfToken }/>
+		@components.FormItem(components.FormItemProps{
+			Class: "mb-4",
+		}) {
+			@components.FormLabel(components.FormLabelProps{
+				Text: "Username",
+				For:  "usernameInput",
+			})
+			@components.Input(components.InputProps{
+				ID:          "usernameInput",
+				Type:        "text",
+				Name:        "username",
+				Placeholder: "username",
+				Attributes: templ.Attributes{
+					"required": "true",
+				},
+			})
+		}
+		@components.FormItem(components.FormItemProps{
+			Class: "mb-4",
+		}) {
+			@components.FormLabel(components.FormLabelProps{
+				Text: "Password",
+				For:  "passwordInput",
+			})
+			<div class="relative">
+				@components.Input(components.InputProps{
+					ID:          "passwordInput",
+					Class:       "pr-10",
+					Name:        "password",
+					Placeholder: "password",
+					Attributes: templ.Attributes{
+						"x-bind:type": "showPassword ? 'text' : 'password'",
+						"required":    "true",
+					},
+				})
+				@components.Button(components.ButtonProps{
+					Type:    "button",
+					Class:   "absolute right-2 top-1/2 -translate-y-1/2",
+					Variant: components.ButtonVariantTransparent,
+					IconLeft: icons.EyeClosed(icons.IconProps{
+						Size: "20",
+						Attributes: templ.Attributes{
+							"x-show": "!showPassword",
+						},
+					}),
+					IconRight: icons.Eye(icons.IconProps{
+						Size: "20",
+						Attributes: templ.Attributes{
+							"x-show": "showPassword",
+						},
+					}),
+					Attributes: templ.Attributes{
+						"x-on:click": "showPassword = !showPassword",
+					},
+				})
+			</div>
+		}
+		@components.FormItem(components.FormItemProps{
+			Class: "flex justify-between items-center max-xs:flex max-xs:flex-col max-xs:justify-center max-xs:items-between)",
+		}) {
+			<div class="flex items-center gap-2 mt-2">
+				@components.Checkbox(components.CheckboxProps{
+					ID:      "rememberUserInput",
+					Name:    "remember",
+					Value:   "1",
+					Checked: true,
+				})
+				@components.Label(components.LabelProps{
+					For:  "rememberUserInput",
+					Text: "Remember me",
+				})
+			</div>
+			<div>
+				@components.Button(components.ButtonProps{
+					Type: "submit",
+					Text: "Log In",
+				})
+			</div>
+		}
+	</form>
+}
+
+templ LoginFormWithError(csrfToken, username, password string) {
+	<form
+		id="loginForm"
+		action="/login"
+		method="post"
+		hx-post="/login"
+		hx-push-url="true"
+		hx-swap="outerHTML scroll:window:top"
+		hx-trigger="submit"
+		hx-headers={ `{"X-CSRF-TOKEN": "` + csrfToken + `"}` }
+		x-data="{ showPassword: false }"
+		hx-swap-oob="true"
+	>
+		<input hidden type="text" name="token" value={ csrfToken }/>
+		@components.FormItem(components.FormItemProps{
+			Class: "mb-4",
+		}) {
+			@components.FormLabel(components.FormLabelProps{
+				Text: "Username",
+				For:  "usernameInput",
+			})
+			@components.Input(components.InputProps{
+				Value:       username,
+				ID:          "usernameInput",
+				Type:        "text",
+				Name:        "username",
+				Placeholder: "username",
+				HasError:    true,
+				Attributes: templ.Attributes{
+					"required": "true",
+				},
+			})
+			@components.FormMessage(components.FormMessageProps{
+				Message: "Please enter a valid username",
+				Type:    "error",
+			})
+		}
+		@components.FormItem(components.FormItemProps{
+			Class: "mb-4",
+		}) {
+			@components.FormLabel(components.FormLabelProps{
+				Text: "Password",
+				For:  "passwordInput",
+			})
+			<div class="relative">
+				@components.Input(components.InputProps{
+					Value:       username,
+					ID:          "passwordInput",
+					Class:       "pr-10",
+					Name:        "password",
+					Placeholder: "password",
+					HasError:    true,
+					Attributes: templ.Attributes{
+						"x-bind:type": "showPassword ? 'text' : 'password'",
+						"required":    "true",
+					},
+				})
+				@components.Button(components.ButtonProps{
+					Type:    "button",
+					Class:   "absolute right-2 top-1/2 -translate-y-1/2",
+					Variant: components.ButtonVariantTransparent,
+					IconLeft: icons.EyeClosed(icons.IconProps{
+						Size: "20",
+						Attributes: templ.Attributes{
+							"x-show": "!showPassword",
+						},
+					}),
+					IconRight: icons.Eye(icons.IconProps{
+						Size: "20",
+						Attributes: templ.Attributes{
+							"x-show": "showPassword",
+						},
+					}),
+					Attributes: templ.Attributes{
+						"x-on:click": "showPassword = !showPassword",
+					},
+				})
+			</div>
+			@components.FormMessage(components.FormMessageProps{
+				Message: "Please enter correct password",
+				Type:    "error",
+			})
+		}
+		@components.FormItem(components.FormItemProps{
+			Class: "flex justify-between items-center max-xs:flex max-xs:flex-col max-xs:justify-center max-xs:items-between)",
+		}) {
+			<div class="flex items-center gap-2 mt-2">
+				@components.Checkbox(components.CheckboxProps{
+					ID:      "rememberUserInput",
+					Name:    "remember",
+					Value:   "1",
+					Checked: true,
+				})
+				@components.Label(components.LabelProps{
+					For:  "rememberUserInput",
+					Text: "Remember me",
+				})
+			</div>
+			<div>
+				@components.Button(components.ButtonProps{
+					Type: "submit",
+					Text: "Log In",
+				})
+			</div>
+		}
+	</form>
+}

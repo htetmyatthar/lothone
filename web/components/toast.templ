@@ -1,0 +1,21 @@
+package components
+
+import "github.com/htetmyatthar/templui/pkg/components"
+
+templ NotiToast(m string) {
+	<div id="toast-container" hx-swap-oob="true">
+		@components.Toast(components.ToastProps{
+			Message: m,
+			Type:    "success",
+		})
+	</div>
+}
+
+templ ErrorToast(m string) {
+	<div id="toast-container" hx-swap-oob="true">
+		@components.Toast(components.ToastProps{
+			Message: m,
+			Type:    "error",
+		})
+	</div>
+}

@@ -1,0 +1,667 @@
+package components
+
+import (
+	"github.com/htetmyatthar/server-manager-v2/internal/utils"
+	"github.com/htetmyatthar/server-manager-v2/middleware/csrf"
+	"github.com/htetmyatthar/templui/pkg/components"
+	"github.com/htetmyatthar/templui/pkg/icons"
+	"strings"
+	"time"
+)
+
+var DateISOFormat = "2025-01-01"
+
+// rendering of accounts in this file.
+type EditUserFormData struct {
+	Username   string
+	DeviceUUID string
+	ServerUUID string
+	StartDate  time.Time
+	EndDate    time.Time
+	Password   string
+	Type       utils.AccountType
+}
+
+templ AccountEditForm(d EditUserFormData, csrfToken string) {
+	<form
+		id="userEditForm"
+		hx-put={ "/accounts" }
+		hx-trigger="submit"
+	>
+		<input hidden type="text" name={ csrf.CSRFFieldName } value={ csrfToken }/>
+		<input hidden type="text" name="type" value={ d.Type.String() }/>
+		@components.FormItem(components.FormItemProps{}) {
+			@components.FormLabel(components.FormLabelProps{
+				Text: "Username",
+				For:  "usernameInput",
+			})
+			@components.Input(components.InputProps{
+				Value: d.Username,
+				ID:    "usernameInput",
+				Type:  "text",
+				Name:  "username",
+				Attributes: templ.Attributes{
+					"required": "true",
+				},
+			})
+		}
+		@components.FormItem(components.FormItemProps{}) {
+			@components.FormLabel(components.FormLabelProps{
+				Text: "Device ID",
+				For:  "deviceIdInput",
+			})
+			@components.Input(components.InputProps{
+				Value:       d.DeviceUUID,
+				ID:          "deviceIdInput",
+				Type:        "text",
+				Name:        "deviceId",
+				Placeholder: "00000000-0000-0000-0000-000000000000",
+				Attributes: templ.Attributes{
+					"required": "true",
+				},
+			})
+		}
+		@components.FormItem(components.FormItemProps{}) {
+			if d.Type == utils.VmessAccountType {
+				@components.FormLabel(components.FormLabelProps{
+					Text: "Server ID",
+					For:  "serverIdInput",
+				})
+				@components.Input(components.InputProps{
+					Value:    d.ServerUUID,
+					ID:       "serverIdInput",
+					Type:     "text",
+					Name:     "serverId",
+					Readonly: true, // create a new account if you want to edit.
+					Class:    "cursor-not-allowed opacity-50",
+					Attributes: templ.Attributes{
+						"required": "true",
+					},
+				})
+			} else if d.Type == utils.ShadowsocksAccountType {
+				@components.FormLabel(components.FormLabelProps{
+					Text: "Password",
+					For:  "passwordInput",
+				})
+				@components.Input(components.InputProps{
+					Value:    d.Password,
+					ID:       "passwordInput",
+					Type:     "text",
+					Name:     "password",
+					Readonly: true, // create a new account if you want to edit.
+					Class:    "cursor-not-allowed opacity-50",
+					Attributes: templ.Attributes{
+						"required": "true",
+					},
+				})
+			}
+		}
+		@components.FormItem(components.FormItemProps{}) {
+			@components.FormLabel(components.FormLabelProps{
+				Text: "Start Date",
+				For:  "startDateInput",
+			})
+			@components.Input(components.InputProps{
+				Value: strings.Split(d.StartDate.String(), " ")[0], // rendering out only the date part.
+				ID:    "startDateInput",
+				Type:  "date",
+				Name:  "startDate",
+				Attributes: templ.Attributes{
+					"required": "true",
+				},
+			})
+		}
+		@components.FormItem(components.FormItemProps{}) {
+			@components.FormLabel(components.FormLabelProps{
+				Text: "End Date",
+				For:  "endDateInput",
+			})
+			@components.Input(components.InputProps{
+				Value: strings.Split(d.EndDate.String(), " ")[0], // rendering out only the date part.
+				ID:    "endDateInput",
+				Type:  "date",
+				Name:  "endDate",
+				Attributes: templ.Attributes{
+					"required": "true",
+				},
+			})
+		}
+	</form>
+}
+
+templ AccountDesktop(user utils.Client, attrs templ.Attributes) {
+	<tr
+		class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 border-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 user-row"
+		id={ "user-desktop-" + user.Id }
+		{ attrs... }
+		data-username={ user.Username }
+		data-device={ user.DeviceId }
+		data-server={ user.Id }
+		data-start={ user.StartDate }
+		data-end={ user.ExpireDate }
+		x-data=""
+	>
+		<th scope="row" class="px-4 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+			{ user.Username }
+		</th>
+		<td class="px-4 py-4 whitespace-nowrap hidden min-lg:table-cell text-gray-500 dark:text-gray-400 max-w-[150px] overflow-hidden">
+			<span>{ user.DeviceId }</span>
+		</td>
+		<td class="px-4 py-4 whitespace-nowrap hidden min-lg:table-cell text-gray-500 dark:text-gray-400 max-w-[150px] overflow-hidden">
+			<span>{ user.Id }</span>
+		</td>
+		<td class="px-4 py-4 whitespace-nowrap">{ user.StartDate }</td>
+		<td class="px-4 py-4 whitespace-nowrap">{ user.ExpireDate }</td>
+		<td class="px-4 py-4 whitespace-nowrap">
+			@components.DropdownMenu(components.DropdownMenuProps{
+				Trigger: components.Button(components.ButtonProps{
+					Class:    "dropdownBtn",
+					Type:     "button",
+					Variant:  components.ButtonVariantTransparent,
+					IconLeft: icons.EllipsisVertical(icons.IconProps{Size: "20"}),
+				}),
+				Items: []components.DropdownMenuItem{
+					{
+						Label: "Edit",
+						IconLeft: icons.UserRoundPen(icons.IconProps{
+							Size: "16",
+						}),
+						Attributes: templ.Attributes{
+							"x-data":        "modalTriggers",
+							"data-modal-id": "editUserModal",
+							"@click":        "openModal",
+			
+							"hx-get":    "/accounts/edit",
+							"hx-vals":   `{"serverId": "` + user.Id + `"}`,
+							"hx-target": "#userEditForm",
+							"hx-swap":   "outerHTML",
+						},
+					},
+					{
+						Label: "Qr",
+						IconLeft: icons.QrCode(icons.IconProps{
+							Size: "16",
+						}),
+						Attributes: templ.Attributes{
+							"x-data":        "modalTriggers",
+							"data-modal-id": "qrModal",
+							"@click":        "openModal",
+			
+							"hx-get":  "/accounts/" + user.Id + "/qr",
+							"hx-swap": "none",
+						},
+					},
+					{
+						Label: "Text Key",
+						IconLeft: icons.Key(icons.IconProps{
+							Size: "16",
+						}),
+						Attributes: templ.Attributes{
+							"x-data":        "modalTriggers",
+							"data-modal-id": "textKeyModal",
+							"@click":        "openModal",
+			
+							"hx-get":  "/accounts/" + user.Id + "/textkey",
+							"hx-swap": "none",
+						},
+					},
+					{
+						Label: "Badge",
+						IconLeft: icons.BookmarkPlus(icons.IconProps{
+							Size: "16",
+						}),
+						Attributes: templ.Attributes{},
+						Href:       "/docs/components/dropdown-menu",
+					},
+					{
+						Label: "Delete",
+						IconLeft: icons.Trash2(icons.IconProps{
+							Size: "16",
+						}),
+						Attributes: templ.Attributes{
+							"hx-confirm": `Are you sure to delete "` + user.Username + `" with server id "` + user.Id[4:] + `"?`,
+							"hx-target":  "closest tr",
+							"hx-swap":    "outerHTML swap:.25s",
+							"hx-delete":  "/accounts",
+							"hx-vals":    `{"deviceId": "` + user.DeviceId + `", "serverId": "` + user.Id + `"}`,
+							"hx-include": "#account-token",
+						},
+					},
+				},
+				Position: "left",
+			})
+		</td>
+	</tr>
+}
+
+templ AccountMobile(user utils.Client, attrs templ.Attributes) {
+	<div
+		class="bg-secondary rounded-xl shadow-md p-4 user-card"
+		id={ "user-mobbile-" + user.Id }
+		{ attrs... }
+		data-username={ user.Username }
+		data-device={ user.DeviceId }
+		data-server={ user.Id }
+		data-start={ user.StartDate }
+		data-end={ user.ExpireDate }
+	>
+		<div class="flex flex-col space-y-3">
+			<div class="flex justify-between items-center">
+				<p class="text-lg font-semibold text-gray-900 dark:text-gray-200">{ user.Username }</p>
+				@components.DropdownMenu(components.DropdownMenuProps{
+					Trigger: components.Button(components.ButtonProps{
+						Class:    "dropdownBtn",
+						Type:     "button",
+						Variant:  components.ButtonVariantTransparent,
+						IconLeft: icons.EllipsisVertical(icons.IconProps{Size: "20"}),
+					}),
+					Items: []components.DropdownMenuItem{
+						{
+							Label: "Edit",
+							IconLeft: icons.UserRoundPen(icons.IconProps{
+								Size: "16",
+							}),
+							Attributes: templ.Attributes{
+								"x-data":        "modalTriggers",
+								"data-modal-id": "editUserModal",
+								"@click":        "openModal",
+				
+								"hx-get":    "/accounts/" + user.Id + "/edit",
+								"hx-target": "#userEditForm",
+								"hx-swap":   "outerHTML",
+							},
+						},
+						{
+							Label: "Qr",
+							IconLeft: icons.QrCode(icons.IconProps{
+								Size: "16",
+							}),
+							Attributes: templ.Attributes{
+								"x-data":        "modalTriggers",
+								"data-modal-id": "qrModal",
+								"@click":        "openModal",
+				
+								"hx-get":  "/accounts/" + user.Id + "/qr",
+								"hx-swap": "none",
+							},
+						},
+						{
+							Label: "Text Key",
+							IconLeft: icons.Key(icons.IconProps{
+								Size: "16",
+							}),
+							Attributes: templ.Attributes{
+								"x-data":        "modalTriggers",
+								"data-modal-id": "textKeyModal",
+								"@click":        "openModal",
+				
+								"hx-get":  "/accounts/" + user.Id + "/textkey",
+								"hx-swap": "none",
+							},
+						},
+						{
+							Label: "Badge",
+							IconLeft: icons.BookmarkPlus(icons.IconProps{
+								Size: "16",
+							}),
+							Attributes: templ.Attributes{},
+							Href:       "/docs/components/dropdown-menu",
+						},
+						{
+							Label: "Delete",
+							IconLeft: icons.Trash2(icons.IconProps{
+								Size: "16",
+							}),
+							Attributes: templ.Attributes{
+								"hx-confirm": `Are you sure to delete "` + user.Username + `" with server id "` + user.Id[4:] + `"?`,
+								"hx-target":  "closest .user-card",
+								"hx-swap":    "outerHTML swap:.25s",
+								"hx-delete":  "/accounts",
+								"hx-vals":    `{"deviceId': "` + user.DeviceId + `", "serverId": "` + user.Id + `"}`,
+								"hx-include": "#account-token",
+							},
+						},
+					},
+					Position: "left",
+				})
+			</div>
+			<div class="text-sm text-gray-500 dark:text-gray-400 space-y-1">
+				<p>
+					<span class="font-medium">Start:</span> { user.StartDate } | 
+					<span class="font-medium">Expire:</span> { user.ExpireDate }
+				</p>
+				<p>
+					<span class="font-medium">Device:</span>
+					<span class="text-xs">
+						{ user.DeviceId }
+					</span>
+				</p>
+				<p>
+					<span class="font-medium">Server:</span>
+					<span class="text-xs">
+						{ user.Id }
+					</span>
+				</p>
+			</div>
+		</div>
+	</div>
+}
+
+templ AccountCreateForm(csrfToken string, attrs templ.Attributes) {
+	<form
+		id="userCreateForm"
+		hx-post="/accounts"
+		hx-trigger="submit"
+		hx-target="#toast-container"
+		hx-sawp="outerHTML"
+		class="w-full text-sm text-left text-gray-500 dark:text-gray-400"
+		{ attrs... }
+		x-data=""
+	>
+		<input hidden type="text" name={ csrf.CSRFFieldName } value={ csrfToken }/>
+		@components.FormItem(components.FormItemProps{
+			Class: "mb-4",
+		}) {
+			@components.FormLabel(components.FormLabelProps{
+				Text: "Account Type",
+				For:  "typeInput",
+			})
+			@components.Select(components.SelectProps{
+				ID:          "typeInput",
+				Name:        "type",
+				Placeholder: "Please select vpn account type",
+				Options: []components.SelectOption{
+					{Label: "vmess", Value: utils.VmessAccountType.String()},
+					{Label: "shadowsocks", Value: utils.ShadowsocksAccountType.String()},
+					{Label: "sstp", Value: utils.SstpAccountType.String()},
+				},
+				Attributes: templ.Attributes{
+					"required":    "true",
+					"hx-validate": "true",
+					"hx-get":      "/account-form",
+					"hx-trigger":  "revealed,change",
+					"hx-target":   "#additionalForm",
+					"hx-swap":     "outerHTML",
+				},
+			})
+		}
+		@components.FormItem(components.FormItemProps{
+			Class: "mb-4",
+		}) {
+			@components.FormLabel(components.FormLabelProps{
+				Text: "Username",
+				For:  "usernameInput",
+			})
+			@components.Input(components.InputProps{
+				ID:          "usernameInput",
+				Type:        "text",
+				Name:        "username",
+				Placeholder: "username",
+				Attributes: templ.Attributes{
+					"required": "true",
+					"@keyup":   "if ($refs.serverIdInput) {$refs.serverIdInput.value=crypto.randomUUID()};if ($refs.passwordInput) $refs.passwordInput.value=crypto.randomUUID()",
+				},
+			})
+		}
+		<div id="additionalForm"></div>
+	</form>
+}
+
+templ VmessAccountCreate() {
+	<div id="additionalForm">
+		@components.FormItem(components.FormItemProps{
+			Class: "mb-4",
+		}) {
+			@components.FormLabel(components.FormLabelProps{
+				Text: "Device ID",
+				For:  "deviceIdInput",
+			})
+			@components.Input(components.InputProps{
+				ID:    "deviceIdInput",
+				Type:  "text",
+				Name:  "deviceId",
+				Value: "00000000-0000-0000-0000-000000000000",
+				Attributes: templ.Attributes{
+					"required": "true",
+				},
+			})
+			@components.FormDescription(components.FormDescriptionProps{}) {
+				Device id is used for generating device locked QRs and text keys.
+			}
+		}
+		@components.FormItem(components.FormItemProps{
+			Class: "mb-4",
+		}) {
+			@components.FormLabel(components.FormLabelProps{
+				Text: "Server ID",
+				For:  "serverIdInput",
+			})
+			@components.Input(components.InputProps{
+				ID:   "serverIdInput",
+				Type: "text",
+				Name: "serverId",
+				Attributes: templ.Attributes{
+					"required": "true",
+				},
+			})
+			@components.FormDescription(components.FormDescriptionProps{}) {
+				Server id will be generated automatically when you enter the username.		
+			}
+		}
+		@components.FormItem(components.FormItemProps{
+			Class: "mb-4",
+		}) {
+			@components.FormLabel(components.FormLabelProps{
+				Text: "Start Date",
+				For:  "startDateInput",
+			})
+			@components.Input(components.InputProps{
+				ID:    "startDateInput",
+				Type:  "date",
+				Name:  "startDate",
+				Value: strings.Split(time.Now().String(), " ")[0],
+				Attributes: templ.Attributes{
+					"required": "true",
+				},
+			})
+		}
+		@components.FormItem(components.FormItemProps{
+			Class: "mb-4",
+		}) {
+			@components.FormLabel(components.FormLabelProps{
+				Text: "End Date",
+				For:  "endDateInput",
+			})
+			@components.Input(components.InputProps{
+				ID:   "endDateInput",
+				Type: "date",
+				Name: "endDate",
+				Attributes: templ.Attributes{
+					"required": "true",
+				},
+			})
+		}
+		@components.FormItem(components.FormItemProps{
+			Class: "flex items-center justify-center",
+		}) {
+			@components.Button(components.ButtonProps{
+				Type: "submit",
+				Text: "Create",
+				Attributes: templ.Attributes{
+					"form": "userCreateForm",
+				},
+			})
+		}
+	</div>
+}
+
+templ ShadowsocksAccountCreate() {
+	<div id="additionalForm">
+		@components.FormItem(components.FormItemProps{
+			Class: "mb-4",
+		}) {
+			@components.FormLabel(components.FormLabelProps{
+				Text: "Device ID",
+				For:  "deviceIdInput",
+			})
+			@components.Input(components.InputProps{
+				ID:    "deviceIdInput",
+				Type:  "text",
+				Name:  "deviceId",
+				Value: "00000000-0000-0000-0000-000000000000",
+				Attributes: templ.Attributes{
+					"required": "true",
+				},
+			})
+			@components.FormDescription(components.FormDescriptionProps{}) {
+				Device id is used for generating device locked QRs and text keys.
+			}
+		}
+		@components.FormItem(components.FormItemProps{
+			Class: "mb-4",
+		}) {
+			@components.FormLabel(components.FormLabelProps{
+				Text: "Password",
+				For:  "passwordInput",
+			})
+			@components.Input(components.InputProps{
+				ID:          "passwordInput",
+				Name:        "password",
+				Placeholder: "password",
+				Attributes: templ.Attributes{
+					"required": "true",
+				},
+			})
+			@components.FormDescription(components.FormDescriptionProps{}) {
+				Password will be generated automatically when you enter the username.		
+			}
+		}
+		@components.FormItem(components.FormItemProps{
+			Class: "mb-4",
+		}) {
+			@components.FormLabel(components.FormLabelProps{
+				Text: "Start Date",
+				For:  "startDateInput",
+			})
+			@components.Input(components.InputProps{
+				ID:    "startDateInput",
+				Type:  "date",
+				Name:  "startDate",
+				Value: strings.Split(time.Now().String(), " ")[0],
+				Attributes: templ.Attributes{
+					"required": "true",
+				},
+			})
+		}
+		@components.FormItem(components.FormItemProps{
+			Class: "mb-4",
+		}) {
+			@components.FormLabel(components.FormLabelProps{
+				Text: "End Date",
+				For:  "endDateInput",
+			})
+			@components.Input(components.InputProps{
+				ID:   "endDateInput",
+				Type: "date",
+				Name: "endDate",
+				Attributes: templ.Attributes{
+					"required": "true",
+				},
+			})
+		}
+		@components.FormItem(components.FormItemProps{
+			Class: "flex items-center justify-center",
+		}) {
+			@components.Button(components.ButtonProps{
+				Type: "submit",
+				Text: "Create",
+				Attributes: templ.Attributes{
+					"form": "userCreateForm",
+				},
+			})
+		}
+	</div>
+}
+
+templ SstpAccountCreate() {
+	<div id="additionalForm">
+		// just for compatibility sake.
+		<input type="hidden" value="00000000-0000-0000-0000-000000000000" name="deviceId"/>
+		@components.FormItem(components.FormItemProps{
+			Class: "mb-4",
+		}) {
+			@components.FormLabel(components.FormLabelProps{
+				Text: "Password",
+				For:  "passwordInput",
+			})
+			@components.Input(components.InputProps{
+				ID:          "passwordInput",
+				Name:        "password",
+				Placeholder: "password",
+				Attributes: templ.Attributes{
+					"required": "true",
+				},
+			})
+			@components.FormDescription(components.FormDescriptionProps{}) {
+				Password will be generated automatically when you enter the username.		
+			}
+		}
+		@components.FormItem(components.FormItemProps{
+			Class: "mb-4",
+		}) {
+			@components.FormLabel(components.FormLabelProps{
+				Text: "Description",
+				For:  "descInput",
+			})
+			@components.Input(components.InputProps{
+				ID:          "descInput",
+				Name:        "desc",
+				Placeholder: "description",
+			})
+		}
+		@components.FormItem(components.FormItemProps{
+			Class: "mb-4",
+		}) {
+			@components.FormLabel(components.FormLabelProps{
+				Text: "Start Date",
+				For:  "startDateInput",
+			})
+			@components.Input(components.InputProps{
+				ID:    "startDateInput",
+				Type:  "date",
+				Name:  "startDate",
+				Value: strings.Split(time.Now().String(), " ")[0],
+				Attributes: templ.Attributes{
+					"required": "true",
+				},
+			})
+		}
+		@components.FormItem(components.FormItemProps{
+			Class: "mb-4",
+		}) {
+			@components.FormLabel(components.FormLabelProps{
+				Text: "End Date",
+				For:  "endDateInput",
+			})
+			@components.Input(components.InputProps{
+				ID:   "endDateInput",
+				Type: "date",
+				Name: "endDate",
+				Attributes: templ.Attributes{
+					"required": "true",
+				},
+			})
+		}
+		@components.FormItem(components.FormItemProps{
+			Class: "flex items-center justify-center",
+		}) {
+			@components.Button(components.ButtonProps{
+				Type: "submit",
+				Text: "Create",
+				Attributes: templ.Attributes{
+					"form": "userCreateForm",
+				},
+			})
+		}
+	</div>
+}

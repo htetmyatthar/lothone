@@ -1,0 +1,71 @@
+package components 
+
+templ ExpirationMail(address string) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>Your VPN Subscription is Expiring Soon</title>
+			<style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f7;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+        .account-info {
+            background-color: #f8fafc;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid #e2e8f0;
+        }
+        .footer {
+            text-align: center;
+            color: #718096;
+            font-size: 0.875rem;
+            margin-top: 20px;
+        }
+    </style>
+		</head>
+		<body>
+			<div class="container">
+				<div class="header">
+					<h1>Subscription Renewal Reminder</h1>
+				</div>
+				<p>Dear valuable Reseller, your subscriptions that are linked with current email address [{ address }] is approaching its expiration dates. To ensure uninterrupted service, we recommend renewing your plans soon.</p>
+				{ children... }
+				<p>If you have any questions or need assistance, please contact our support team.</p>
+				<div class="footer">
+					<p>&copy; 2024 Your VPN Service. All rights reserved.</p>
+				</div>
+			</div>
+		</body>
+	</html>
+}
+
+// Expiration renders a expiration component inside the account info.
+templ Expiration(username, deviceId, expDate string) {
+	<div class="account-info">
+		<p><strong>Account Details:</strong></p>
+		<p>Username: { username }</p>
+		<p>Device ID: { deviceId }</p>
+		<p>Expiration Date: { expDate }</p>
+	</div>
+}

@@ -1,0 +1,32 @@
+package components
+
+import "github.com/htetmyatthar/templui/pkg/components"
+
+templ DarkModeToggle() {
+	<div
+		x-data="{ 
+            darkMode: localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches),
+            initializeTheme() {
+                this.darkMode = localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                document.documentElement.classList.toggle('dark', this.darkMode);
+            }
+        }"
+		x-init="initializeTheme(); $watch('darkMode', value => {
+            document.documentElement.classList.toggle('dark', value);
+            localStorage.setItem('theme', value ? 'dark' : 'light');
+        })"
+		class="flex flex-col p-2 gap-0.5 items-center justify-center lg:flex-row lg:gap-2"
+	>
+		@components.Toggle(components.ToggleProps{
+			Class: "toggle-input",
+			ID:    "themeToggle",
+			Attributes: templ.Attributes{
+				"x-model": "darkMode",
+			},
+		})
+		@components.Label(components.LabelProps{
+			For:  "themeToggle",
+			Text: "Dark Mode",
+		})
+	</div>
+}

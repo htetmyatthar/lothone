@@ -1,0 +1,62 @@
+package layout
+
+import "github.com/htetmyatthar/templui/pkg/components"
+
+templ base(resources, header, main, footer templ.Component) {
+	<!DOCTYPE html>
+	<html lang="en" class="">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<link rel="icon" href="https://cdn.lothone.shop/lothone.png"/>
+			<link href="https://cdn.lothone.shop/lothone_panel.css" rel="stylesheet"/>
+			// <script type="text/javascript" src="https://cdn.lothone.shop/htmx.min.js" defer></script>
+			<script type="text/javascript" src="https://cdn.lothone.shop/htmx.min.js" defer></script>
+			<script type="text/javascript" src="https://cdn.lothone.shop/alpine.min.js" defer></script>
+			// <script type="text/javascript" src="https://cdn.lothone.shop/alpine.custom.js" defer></script>
+			<script type="text/javascript" src="/static/js/alpine.custom.js" defer></script>
+			// font files
+			<link rel="preconnect" href="https://fonts.googleapis.com"/>
+			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+			<link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet"/>
+			// component scripts.
+			@components.ModalScript()
+			@components.TabsScript()
+			@components.ToastScript()
+			if resources != nil {
+				@resources
+			}
+		</head>
+		<body class="max-w-[1200px] mx-auto dark:bg-gray-900" hx-ext="head-support">
+			<script defer>
+			// even add the content-type for get request.
+			document.body.addEventListener('htmx:beforeRequest', function(evt) {
+				if (evt.detail.elt.getAttribute('hx-get')) {
+					evt.detail.xhr.setRequestHeader('Content-Type', 'application/json');
+				}
+			});
+			</script>
+			<style>
+				:target{
+					scroll-margin-top: 4rem;
+				}
+			</style>
+			if header != nil {
+				@header
+			}
+			if main != nil {
+				@main
+			}
+			if footer != nil {
+				@footer
+			}
+		</body>
+		<script>
+		/*
+		document.addEventListener("DOMContentLoaded", () => {
+			htmx.logAll();
+		})
+		*/
+		</script>
+	</html>
+}

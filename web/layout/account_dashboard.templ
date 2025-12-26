@@ -1,0 +1,301 @@
+package layout
+
+import (
+	"github.com/htetmyatthar/server-manager-v2/internal/utils"
+	scomponents "github.com/htetmyatthar/server-manager-v2/web/components"
+	"github.com/htetmyatthar/templui/pkg/components"
+	"github.com/htetmyatthar/templui/pkg/icons"
+	"html"
+)
+
+templ VmessAccountsDashboard(users []utils.Client, accountCSRFToken string) {
+	@AccountsDashboard() {
+		@scomponents.VmessTable(users, accountCSRFToken)
+	}
+}
+
+templ ShadowsocksAccountsDashboard(users []utils.Client, accountCSRFToken string) {
+	@AccountsDashboard() {
+		@scomponents.ShadowsocksTable(users, accountCSRFToken)
+	}
+}
+
+templ SstpAccountsDashboard(users []utils.UserInfo, accountCSRFToken string) {
+	@AccountsDashboard() {
+		@scomponents.SSTPTable(users, accountCSRFToken)
+	}
+}
+
+templ AccountsDashboard() {
+	<section x-data="" id="main-content" class="p-4 sm:ml-48 users" hx-swap-oob="true">
+		<div class="flex gap-4">
+			@components.FormItem(components.FormItemProps{
+				Class: "mb-4 max-w-[250px]",
+			}) {
+				@components.FormLabel(components.FormLabelProps{
+					Text:  "Search",
+					For:   "searchInput",
+					Class: "sr-only",
+				})
+				<div class="relative">
+					<div class="absolute inset-y-0 rtl:inset-r-0 start-0 flex items-center ps-3 pointer-events-none">
+						@icons.Search(icons.IconProps{
+							Size: "20",
+						})
+					</div>
+					@components.Input(components.InputProps{
+						ID:          "searchInput",
+						Class:       "block pt-2 ps-10",
+						Value:       "",
+						Name:        "search",
+						Placeholder: "Search for items",
+						Type:        "search",
+					})
+				</div>
+			}
+			@components.FormItem(components.FormItemProps{
+				Class: "mb-4 max-w-[250px]",
+			}) {
+				<div class="relative">
+					@components.Select(components.SelectProps{
+						ID:          "sortByInput",
+						Name:        "sortBy",
+						Class:       "block ",
+						SelectClass: "px-8",
+						Options: []components.SelectOption{
+							{Label: "Username", Value: "1"},
+							{Label: "Start Date", Value: "2"},
+							{Label: "Expire Date", Value: "3"},
+						},
+					})
+				</div>
+			}
+		</div>
+		{ children... }
+	</section>
+}
+
+templ V2rayDashboardResources() {
+	<script type="text/javascript" src="/static/js/qrcode.min.js" defer></script>
+}
+
+// AccountsDashboardPage renders the users inside the content.
+templ AccountsDashboardPage(content templ.Component, sideBarCSRFToken string) {
+	@base(
+		V2rayDashboardResources(),
+		nil,
+		DashboardMain(content, sideBarCSRFToken),
+		nil,
+	)
+}
+
+type QRData struct {
+	Key        string
+	Username   string
+	Remarks    string
+	Attributes templ.Attributes
+}
+
+type TextKeyData struct {
+	Key        string
+	Attributes templ.Attributes
+}
+
+templ TextKeyTab(kData TextKeyData) {
+	<div
+		class="w-full max-w-md"
+		x-data={ "{ textToCopy: '" + kData.Key + "', copied: false }" }
+		{ kData.Attributes... }
+	>
+		<div class="space-y-2 w-full max-w-md mb-4">
+			@components.Textarea(components.TextareaProps{
+				Disabled: true,
+				Value:    kData.Key,
+				Class:    "textKey",
+				Rows:     6,
+				Attributes: templ.Attributes{
+					"x-ref":   "textArea",
+					"x-model": "textToCopy",
+				},
+			})
+		</div>
+		<div class="flex items-center justify-center">
+			@components.ModalClose("textKeyModal") {
+				@components.Button(components.ButtonProps{
+					Type: "button",
+					IconLeft: icons.Copy(icons.IconProps{
+						Size: "16",
+					}),
+					Attributes: templ.Attributes{
+						"x-text": "copied ? 'Copied!' : 'Copy'",
+						"@click": "navigator.clipboard.writeText(textToCopy).then(() => { copied = true; setTimeout(() => copied = false, 1500) })",
+					},
+				})
+			}
+		</div>
+	</div>
+}
+
+templ QRTab(qData QRData) {
+	<div
+		{ qData.Attributes... }
+		class="qrContainer text-center"
+		x-data={ "qrComponent({ key: '" + qData.Key + "', username: '" + html.EscapeString(qData.Username) + "', remarks: '" + qData.Remarks + "' })" }
+		x-init="init()"
+	>
+		<p>
+			<span class="qrUsername" x-text="username" x-ref="usernameElement"></span>
+		</p>
+		<div class="qrCode" x-ref="qrCodeElement"></div>
+		<p>
+			<span class="qrRemarks" x-text="remarks" x-ref="remarksElement"></span>
+		</p>
+		<div class="mt-4 flex items-center justify-center">
+			@components.ModalClose("qrModal") {
+				@components.Button(components.ButtonProps{
+					Text:  "Download",
+					Type:  "button",
+					Class: "download-btn",
+					IconLeft: icons.Download(icons.IconProps{
+						Size: "16",
+					}),
+					Attributes: templ.Attributes{
+						"@click": "downloadQR()",
+					},
+				})
+			}
+		</div>
+	</div>
+}
+
+templ InitialTabContent(id string) {
+	<div id={ id }>initial tab content. </div>
+}
+
+templ QRModal() {
+	@components.Modal(components.ModalProps{ID: "qrModal", Class: "max-w-md"}) {
+		@components.ModalHeader() {
+			<div class="flex items-center justify-between border-b-2 border-solid">
+				<span>
+					CHOOSE THE TYPE OF QR CODE KEY.
+				</span>
+				<span>
+					@components.ModalClose("qrModal") {
+						@components.Button(components.ButtonProps{
+							Type:    "button",
+							Variant: components.ButtonVariantTransparent,
+							IconLeft: icons.X(icons.IconProps{
+								Size: "24",
+							}),
+						})
+					}
+				</span>
+			</div>
+		}
+		@components.ModalBody() {
+			@components.Tabs(components.TabsProps{
+				Tabs: []components.Tab{
+					{
+						Title:   "Locked",
+						Content: InitialTabContent("lockedQRTab"),
+					},
+					{
+						Title:   "Opened",
+						Content: InitialTabContent("openedQRTab"),
+					},
+				},
+				TabsContainerClass:    "w-full",
+				ContentContainerClass: "w-full",
+			})
+		}
+		@components.ModalFooter() {
+			<div class="flex items-center justify-center"></div>
+		}
+	}
+}
+
+templ TextKeyModal() {
+	@components.Modal(components.ModalProps{ID: "textKeyModal", Class: "max-w-md"}) {
+		@components.ModalHeader() {
+			<div class="flex items-center justify-between border-b-2 border-solid">
+				<span>
+					CHOOSE THE TYPE OF TEXT KEY.
+				</span>
+				<span>
+					@components.ModalClose("textKeyModal") {
+						@components.Button(components.ButtonProps{
+							Type:    "button",
+							Variant: components.ButtonVariantTransparent,
+							IconLeft: icons.X(icons.IconProps{
+								Size: "24",
+							}),
+						})
+					}
+				</span>
+			</div>
+		}
+		@components.ModalBody() {
+			@components.Tabs(components.TabsProps{
+				Tabs: []components.Tab{
+					{
+						Title:   "Locked",
+						Content: InitialTabContent("lockedTextKeyTab"),
+					},
+					{
+						Title:   "Opened",
+						Content: InitialTabContent("openedTextKeyTab"),
+					},
+				},
+				TabsContainerClass:    "w-full",
+				ContentContainerClass: "w-full",
+			})
+		}
+	}
+}
+
+templ EditUserModal() {
+	@components.Modal(components.ModalProps{ID: "editUserModal", Class: "overflow-visible max-w-md"}) {
+		@components.ModalHeader() {
+			<div class="flex items-center justify-between border-b-2 border-solid">
+				<span>
+					UPDATE USER INFORMATION
+				</span>
+				<span>
+					@components.ModalClose("editUserModal") {
+						@components.Button(components.ButtonProps{
+							Type:    "button",
+							Variant: components.ButtonVariantTransparent,
+							IconLeft: icons.X(icons.IconProps{
+								Size: "24",
+							}),
+						})
+					}
+				</span>
+			</div>
+		}
+		@components.ModalBody() {
+			<div id="userEditForm"></div>
+		}
+		@components.ModalFooter() {
+			<div class="flex gap-4">
+				@components.ModalClose("editUserModal") {
+					@components.Button(components.ButtonProps{
+						Text:    "Cancel",
+						Type:    "button",
+						Variant: components.ButtonVariantDestructive,
+					})
+				}
+				@components.ModalClose("editUserModal") {
+					@components.Button(components.ButtonProps{
+						Text:    "Update",
+						Type:    "submit",
+						Variant: components.ButtonVariantDefault,
+						Attributes: templ.Attributes{
+							"form": "userEditForm",
+						},
+					})
+				}
+			</div>
+		}
+	}
+}

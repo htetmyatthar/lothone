@@ -1,0 +1,295 @@
+package components
+
+import (
+	"github.com/htetmyatthar/server-manager-v2/internal/utils"
+	"github.com/htetmyatthar/server-manager-v2/middleware/csrf"
+	"github.com/htetmyatthar/templui/pkg/components"
+	"github.com/htetmyatthar/templui/pkg/icons"
+)
+
+templ ShadowsocksTable(users []utils.Client, accountCSRFToken string) {
+	<input id="account-token" hidden name={ csrf.CSRFFieldName } type="text" value={ accountCSRFToken }/>
+	<!-- Desktop View -->
+	<div class="hidden sm:block">
+		<table id="desktopTable" class="shadow-lg w-full text-sm text-left text-gray-500 dark:text-gray-400">
+			<thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+				<tr>
+					<th scope="col" class="px-4 py-3 text-left">Username</th>
+					<th scope="col" class="px-4 py-3 text-left hidden min-lg:table-cell">Device UUID</th>
+					<th scope="col" class="px-4 py-3 text-left hidden min-lg:table-cell">Password</th>
+					<th scope="col" class="px-4 py-3 text-left">Start Date</th>
+					<th scope="col" class="px-4 py-3 text-left">Expire Date</th>
+					<th scope="col" class="px-4 py-3 max-w-[50px]">
+						<span class="sr-only">Actions</span>
+						@components.Button(components.ButtonProps{
+							Type:  "button",
+							Class: "text-md flex justify-between",
+							IconLeft: icons.RotateCcw(icons.IconProps{
+								Size: "20",
+							}),
+							Attributes: templ.Attributes{
+								"hx-get":     "/dashboard/shadowsocks/refresh",
+								"hx-target":  "#main-content",
+								"hx-swap":    "outerHTML",
+								"hx-trigger": "click",
+							},
+						})
+					</th>
+				</tr>
+			</thead>
+			// careful only use the '"'(double-quote) for the hx-header, hx-headers to be a valid JSON object.
+			<tbody
+				class="divide-y divide-gray-200 dark:divide-gray-700"
+				hx-headers={ `{"X-CSRF-TOKEN": "` + accountCSRFToken + `"}` }
+				id="users-desktop-data"
+			>
+				for _, user := range users {
+					@ShadowsocksAccountDesktop(user, templ.Attributes{"data-newly-swapped": "false"})
+				}
+			</tbody>
+		</table>
+	</div>
+	<!-- Mobile View -->
+	<div
+		id="mobileView"
+		class="sm:hidden space-y-4"
+		hx-headers={ "{'X-CSRF-TOKEN': '" + accountCSRFToken + "'}" }
+		id="users-mobile-data"
+	>
+		for _, user := range users {
+			@ShadowsocksAccountMobile(user, templ.Attributes{"data-newly-swapped": "false"})
+		}
+	</div>
+}
+
+templ ShadowsocksAccountMobile(user utils.Client, attrs templ.Attributes) {
+	<div
+		class="bg-secondary rounded-xl shadow-md p-4 user-card"
+		id={ "user-mobbile-" + user.Password }
+		{ attrs... }
+		data-username={ user.Username }
+		data-device={ user.DeviceId }
+		data-server=""
+		data-password={ user.Password }
+		data-start={ user.StartDate }
+		data-end={ user.ExpireDate }
+		data-desc=""
+	>
+		<div class="flex flex-col space-y-3">
+			<div class="flex justify-between items-center">
+				<p class="text-lg font-semibold text-gray-900 dark:text-gray-200">{ user.Username }</p>
+				@components.DropdownMenu(components.DropdownMenuProps{
+					Trigger: components.Button(components.ButtonProps{
+						Class:    "dropdownBtn",
+						Type:     "button",
+						Variant:  components.ButtonVariantTransparent,
+						IconLeft: icons.EllipsisVertical(icons.IconProps{Size: "20"}),
+					}),
+					Items: []components.DropdownMenuItem{
+						{
+							Label: "Edit",
+							IconLeft: icons.UserRoundPen(icons.IconProps{
+								Size: "16",
+							}),
+							Attributes: templ.Attributes{
+								"x-data":        "modalTriggers",
+								"data-modal-id": "editUserModal",
+								"@click":        "openModal",
+				
+								"hx-get":    "/accounts/edit",
+								"hx-vals":   `{"password": "` + user.Password + `", "type": "` + utils.ShadowsocksAccountType.String() + `"}`,
+								"hx-target": "#userEditForm",
+								"hx-swap":   "outerHTML",
+							},
+						},
+						{
+							Label: "Qr",
+							IconLeft: icons.QrCode(icons.IconProps{
+								Size: "16",
+							}),
+							Attributes: templ.Attributes{
+								"x-data":        "modalTriggers",
+								"data-modal-id": "qrModal",
+								"@click":        "openModal",
+				
+								"hx-get":  "/accounts/" + user.Password + "/qr",
+								"hx-vals": `{"type": "` + utils.ShadowsocksAccountType.String() + `"}`,
+								"hx-swap": "none",
+							},
+						},
+						{
+							Label: "Text Key",
+							IconLeft: icons.Key(icons.IconProps{
+								Size: "16",
+							}),
+							Attributes: templ.Attributes{
+								"x-data":        "modalTriggers",
+								"data-modal-id": "textKeyModal",
+								"@click":        "openModal",
+				
+								"hx-get":  "/accounts/" + user.Password + "/textkey",
+								"hx-vals": `{"type": "` + utils.ShadowsocksAccountType.String() + `"}`,
+								"hx-swap": "none",
+							},
+						},
+						{
+							Label: "Badge",
+							IconLeft: icons.BookmarkPlus(icons.IconProps{
+								Size: "16",
+							}),
+							Attributes: templ.Attributes{},
+							Href:       "/docs/components/dropdown-menu",
+						},
+						{
+							Label: "Delete",
+							IconLeft: icons.Trash2(icons.IconProps{
+								Size: "16",
+							}),
+							Attributes: templ.Attributes{
+								"hx-confirm": `Are you sure to delete "` + user.Username + `" with password"` + user.Password[4:] + `"?`,
+								"hx-target":  "closest .user-card",
+								"hx-swap":    "outerHTML swap:.25s",
+								"hx-delete":  "/accounts",
+								"hx-vals":    `{"deviceId": "` + user.DeviceId + `", "serverId": "` + user.Password + `","type": "` + utils.ShadowsocksAccountType.String() + `"}`,
+								"hx-include": "#account-token",
+							},
+						},
+					},
+					Position: "left",
+				})
+			</div>
+			<div class="text-sm text-gray-500 dark:text-gray-400 space-y-1">
+				<p>
+					<span class="font-medium">Start:</span> { user.StartDate } | 
+					<span class="font-medium">Expire:</span> { user.ExpireDate }
+				</p>
+				<p>
+					<span class="font-medium">Device:</span>
+					<span class="text-xs">
+						{ user.DeviceId }
+					</span>
+				</p>
+				<p>
+					<span class="font-medium">Server:</span>
+					<span class="text-xs">
+						{ user.Password }
+					</span>
+				</p>
+			</div>
+		</div>
+	</div>
+}
+
+templ ShadowsocksAccountDesktop(user utils.Client, attrs templ.Attributes) {
+	<tr
+		class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 border-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 user-row"
+		id={ "user-desktop-" + user.Password }
+		{ attrs... }
+		data-username={ user.Username }
+		data-device={ user.DeviceId }
+		data-server=""
+		data-password={ user.Password }
+		data-start={ user.StartDate }
+		data-end={ user.ExpireDate }
+		data-desc=""
+		x-data=""
+	>
+		<th scope="row" class="px-4 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+			{ user.Username }
+		</th>
+		<td class="px-4 py-4 whitespace-nowrap hidden min-lg:table-cell text-gray-500 dark:text-gray-400 max-w-[150px] overflow-hidden">
+			<span>{ user.DeviceId }</span>
+		</td>
+		<td class="px-4 py-4 whitespace-nowrap hidden min-lg:table-cell text-gray-500 dark:text-gray-400 max-w-[150px] overflow-hidden">
+			<span>{ user.Password }</span>
+		</td>
+		<td class="px-4 py-4 whitespace-nowrap">{ user.StartDate }</td>
+		<td class="px-4 py-4 whitespace-nowrap">{ user.ExpireDate }</td>
+		<td class="px-4 py-4 whitespace-nowrap">
+			@components.DropdownMenu(components.DropdownMenuProps{
+				Trigger: components.Button(components.ButtonProps{
+					Class:    "dropdownBtn",
+					Type:     "button",
+					Variant:  components.ButtonVariantTransparent,
+					IconLeft: icons.EllipsisVertical(icons.IconProps{Size: "20"}),
+				}),
+				Items: []components.DropdownMenuItem{
+					{
+						Label: "Edit",
+						IconLeft: icons.UserRoundPen(icons.IconProps{
+							Size: "16",
+						}),
+						Attributes: templ.Attributes{
+							"x-data":        "modalTriggers",
+							"data-modal-id": "editUserModal",
+							"@click":        "openModal",
+			
+							"hx-get":    "/accounts/edit",
+							"hx-vals":   `{"password": "` + user.Password + `", "type": "` + utils.ShadowsocksAccountType.String() + `"}`,
+							"hx-target": "#userEditForm",
+							"hx-swap":   "outerHTML",
+						},
+					},
+					{
+						Label: "Qr",
+						IconLeft: icons.QrCode(icons.IconProps{
+							Size: "16",
+						}),
+						Attributes: templ.Attributes{
+							"x-data":        "modalTriggers",
+							"data-modal-id": "qrModal",
+							"@click":        "openModal",
+			
+							"hx-get":  "/accounts/" + user.Password + "/qr",
+							"hx-vals": `{"type": "` + utils.ShadowsocksAccountType.String() + `"}`,
+							"hx-swap": "none",
+						},
+					},
+					{
+						Label: "Text Key",
+						IconLeft: icons.Key(icons.IconProps{
+							Size: "16",
+						}),
+						Attributes: templ.Attributes{
+							"x-data":        "modalTriggers",
+							"data-modal-id": "textKeyModal",
+							"@click":        "openModal",
+			
+							"hx-get":  "/accounts/" + user.Password + "/textkey",
+							"hx-vals": `{"type": "` + utils.ShadowsocksAccountType.String() + `"}`,
+							"hx-swap": "none",
+						},
+					},
+					{
+						Label: "Badge",
+						IconLeft: icons.BookmarkPlus(icons.IconProps{
+							Size: "16",
+						}),
+						Attributes: templ.Attributes{},
+						Href:       "/docs/components/dropdown-menu",
+					},
+					{
+						Label: "Delete",
+						IconLeft: icons.Trash2(icons.IconProps{
+							Size: "16",
+						}),
+						Attributes: templ.Attributes{
+							"hx-confirm": `Are you sure to delete "` + user.Username + `" with password "` + user.Password[4:] + `"?`,
+							"hx-target":  "closest tr",
+							"hx-swap":    "outerHTML swap:.25s",
+							"hx-delete":  "/accounts",
+							"hx-vals":    `{"deviceId": "` + user.DeviceId + `", "serverId": "` + user.Password + `","type": "` + utils.ShadowsocksAccountType.String() + `"}`,
+							"hx-include": "#account-token",
+						},
+					},
+				},
+				Position: "left",
+			})
+		</td>
+	</tr>
+}
+
+templ ShadowsocksAccount(user utils.Client, attrs templ.Attributes) {
+	@ShadowsocksAccountDesktop(user, attrs)
+	@ShadowsocksAccountMobile(user, attrs)
+}
