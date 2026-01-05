@@ -4,8 +4,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/htetmyatthar/server-manager-v2/internal/utils"
-	"github.com/htetmyatthar/server-manager-v2/middleware/session"
+	"github.com/htetmyatthar/lothone/internal/utils"
+	"github.com/htetmyatthar/lothone/middleware/session"
 )
 
 func AuthMiddleware(next http.Handler) http.Handler {

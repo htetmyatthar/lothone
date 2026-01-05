@@ -9,8 +9,8 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
-	"github.com/htetmyatthar/server-manager-v2/internal/utils"
-	scomponents "github.com/htetmyatthar/server-manager-v2/web/components"
+	"github.com/htetmyatthar/lothone/internal/utils"
+	scomponents "github.com/htetmyatthar/lothone/web/components"
 	"github.com/htetmyatthar/templui/pkg/components"
 	"github.com/htetmyatthar/templui/pkg/icons"
 	"html"

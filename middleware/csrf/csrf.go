@@ -19,7 +19,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/htetmyatthar/server-manager-v2/middleware/session"
+	"github.com/htetmyatthar/lothone/middleware/session"
 )
 
 const (

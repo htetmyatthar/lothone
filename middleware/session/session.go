@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/alexedwards/scs/v2"
-	"github.com/htetmyatthar/server-manager-v2/internal/config"
+	"github.com/htetmyatthar/lothone/internal/config"
 )
 
 var (

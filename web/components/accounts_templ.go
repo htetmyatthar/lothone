@@ -9,8 +9,8 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
-	"github.com/htetmyatthar/server-manager-v2/internal/utils"
-	"github.com/htetmyatthar/server-manager-v2/middleware/csrf"
+	"github.com/htetmyatthar/lothone/internal/utils"
+	"github.com/htetmyatthar/lothone/middleware/csrf"
 	"github.com/htetmyatthar/templui/pkg/components"
 	"github.com/htetmyatthar/templui/pkg/icons"
 	"strings"
